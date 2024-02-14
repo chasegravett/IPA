@@ -142,6 +142,7 @@ class PingerFrame(Labelframe):
             self.temp.config(bootstyle="warning")
             self.ceased.config(text="Ping Cancelled")
 
+
 class MonitorBuddyFrame(Labelframe):
     def __init__(self):
         super().__init__(bootstyle="warning", text=" Monitor Buddy ♡ ")
@@ -370,9 +371,10 @@ class MonitoringActiveFrame(Labelframe):
         if self.begin_button.cget("text") == "Click to begin easy monitoring":
             self.begin_button.config(text = "Click to end easy monitoring")
             self.main_thread.start()
-        else:
-            self.begin_button.config(text = "Click to begin easy monitoring")
+        elif self.begin_button.cget("text") == "Click to end easy monitoring":
+            self.begin_button.config(text = "Monitoring Ended. Relaunch to Start")
             self.stop_thread = True
+            self.browser.quit()
 
     
     def get_data(self):
