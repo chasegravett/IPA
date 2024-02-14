@@ -1,2 +1,0 @@
-username = "ggravett"
-password = "fuckoff!"
