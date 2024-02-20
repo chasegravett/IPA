@@ -194,6 +194,17 @@ class MonitorBuddyFrame(Labelframe):
     def __init__(self):
         super().__init__(bootstyle="warning", text=" Monitor Buddy ♡ ")
 
+        # PLanning out implementation of monitoring multiple sites
+        self.urls = {
+            "FECC": "http://100.67.114.250/alert-log",      #Connect2First
+            "LES": "http://100.93.114.250/alert-log",       #LexNet
+            "CECC": "http://100.78.114.250/alert-log",      #Empower
+            "CCECC": "http://100.77.114.250/alert-log"      #ClayCounty
+        }
+
+        # Queue for building only monitoring views requested
+        self.chosen_to_monitor = []
+
         # FECC
         self.url = "http://100.67.114.250/alert-log"
         self.newest_alert_xpath = "//*[@id=\"alertlog\"]/tbody/tr[1]"
@@ -535,3 +546,56 @@ class WelcomeFrame(Labelframe):
             font=(FONT_STYLE, 14)
         )
         self.description.grid(column=1, row=0, columnspan=4, padx=20, pady=20, sticky="new")
+
+
+class TestFrame(Labelframe):
+    def __init__(self):
+        super().__init__(bootstyle="warning", text=" Testing Frame ")
+
+        self.grid(
+            column=0, 
+            row=1, 
+            padx=50, 
+            pady=25, 
+            columnspan=7, 
+            rowspan=7, 
+            sticky="nsew"
+        )
+        self.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
+        self.rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8, 9), weight=1)
+
+        self.monitor_frame_1 = Labelframe(
+            self,
+            bootstyle="info.TLabelframe",
+            text=" FECC "
+        )
+        self.monitor_frame_1.grid(column=0, row=0, columnspan=3, rowspan=5, padx=30, pady=30, sticky="nsew")
+        self.monitor_frame_1.columnconfigure((0, 1, 2), weight=1)
+        self.monitor_frame_1.rowconfigure((0, 1, 2, 3, 4), weight=1)
+
+        self.monitor_frame_2 = Labelframe(
+            self,
+            bootstyle="info.TLabelframe",
+            text=" LES "
+        )
+        self.monitor_frame_2.grid(column=3, row=0, columnspan=3, rowspan=5, padx=30, pady=30, sticky="nsew")
+        self.monitor_frame_2.columnconfigure((0, 1, 2), weight=1)
+        self.monitor_frame_2.rowconfigure((0, 1, 2, 3, 4), weight=1)
+
+        self.monitor_frame_3 = Labelframe(
+            self,
+            bootstyle="info.TLabelframe",
+            text=" Empower "
+        )
+        self.monitor_frame_3.grid(column=0, row=5, columnspan=3, rowspan=5, padx=30, pady=30, sticky="nsew")
+        self.monitor_frame_3.columnconfigure((0, 1, 2), weight=1)
+        self.monitor_frame_3.rowconfigure((0, 1, 2, 3, 4), weight=1)
+
+        self.monitor_frame_4 = Labelframe(
+            self,
+            bootstyle="info.TLabelframe",
+            text=" ClayCounty "
+        )
+        self.monitor_frame_4.grid(column=3, row=5, columnspan=3, rowspan=5, padx=30, pady=30, sticky="nsew")
+        self.monitor_frame_4.columnconfigure((0, 1, 2), weight=1)
+        self.monitor_frame_4.rowconfigure((0, 1, 2, 3, 4), weight=1)

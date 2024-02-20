@@ -1,6 +1,6 @@
 from ttkbootstrap import Window, Label, Labelframe, Button, Style
 from settings import *
-from frames import PingerFrame, MonitorBuddyFrame, TemporaryFrame, WelcomeFrame
+from frames import *
 
 
 class BaseApp(Window):
@@ -78,7 +78,16 @@ class BaseApp(Window):
         )
         self.monitor_buddy_button.grid(row=1, column=0, columnspan=3, sticky="nsew", pady=25, padx=40)
 
-        for i in range(2, len(self.button_list) - 1):
+        self.test_frame_button = Button(
+            self.tools_frame,
+            bootstyle="info.Outline.TButton",
+            text=" Test Frame ",
+            cursor="hand2",
+            command= lambda: TestFrame().tkraise()
+        )
+        self.test_frame_button.grid(row=2, column=0, columnspan=3, sticky="nsew", pady=25, padx=40)
+
+        for i in range(3, len(self.button_list) - 1):
             bname = self.button_list[i]
             temp = Button(
                 self.tools_frame,
