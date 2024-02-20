@@ -202,15 +202,10 @@ class MonitorBuddyFrame(Labelframe):
             "CCECC": "http://100.77.114.250/alert-log"      #ClayCounty
         }
 
-        # Queue for building only monitoring views requested
-        self.chosen_to_monitor = []
-
         # FECC
         self.url = "http://100.67.114.250/alert-log"
         self.newest_alert_xpath = "//*[@id=\"alertlog\"]/tbody/tr[1]"
-
         self.libre_password_path = "creds\\libre\\fecc.txt"
-
         self.browser = self.launch_browser()
 
         # Changing label used for invalid creds and logging in message
@@ -239,7 +234,7 @@ class MonitorBuddyFrame(Labelframe):
 
             self.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
             self.rowconfigure((0, 1, 2, 3, 4), weight=1)
-
+            
             self.description = Label(
                 self,
                 bootstyle="info",
@@ -305,7 +300,7 @@ class MonitorBuddyFrame(Labelframe):
         self.browser.find_element(By.NAME, "password").send_keys(pword)
         self.browser.find_element(By.CSS_SELECTOR, ".btn-primary").click()
         sleep(1)
-
+        
         try:
             a = self.browser.find_element(By.NAME, "username").is_displayed()
             b = self.browser.find_element(By.NAME, "password").is_displayed()
@@ -322,10 +317,11 @@ class MonitorBuddyFrame(Labelframe):
             file.write(f"{u},{p}".strip())
 
 
+
 class MonitoringActiveFrame(Labelframe):
     def __init__(self, browser):
         super().__init__(bootstyle="warning", text=" Monitor Buddy ♡ ")
-
+        sleep(1)
         self.browser = browser
         self.newest_alert_xpath = "//*[@id=\"alertlog\"]/tbody/tr[1]"
         self.main_thread = Thread(target=self.get_data)
@@ -548,6 +544,297 @@ class WelcomeFrame(Labelframe):
         self.description.grid(column=1, row=0, columnspan=4, padx=20, pady=20, sticky="new")
 
 
+class TinyMonitoringFrame(Labelframe):
+    def __init__(self, parent, coop, start_column, start_row):
+        super().__init__(parent, bootstyle="info.TLabelframe", text=f" {coop} ")
+        
+        self.urls = {
+            "fecc": "http://100.67.114.250/alert-log",          #Connect2First
+            "les": "http://100.93.114.250/alert-log",           #LexNet
+            "empower": "http://100.78.114.250/alert-log",       #Empower
+            "claycounty": "http://100.77.114.250/alert-log"     #ClayCounty
+        }
+        self.start_column = start_column
+        self.start_row = start_row
+        self.coop_unformatted = coop
+        self.coop = coop.lower()
+        self.url = self.urls[self.coop]
+        self.libre_password_path = f"creds\\libre\\{self.coop}.txt"
+        self.parent = parent
+
+        self.browser = self.launch_browser()
+
+        self.grid(
+            column = self.start_column,
+            row = self.start_row,
+            columnspan=3, 
+            rowspan=5, 
+            padx=40, 
+            pady=40, 
+            sticky="nsew"
+        )
+        self.columnconfigure((0, 1, 2), weight=1)
+        self.rowconfigure((0, 1, 2, 3, 4), weight=1)
+
+        if isfile(self.libre_password_path):
+            with open(self.libre_password_path, "r") as file:
+                u, p = file.readline().split(",")
+            self.login(ex_user=u, ex_pass=p)
+        else:
+            self.description = Label(
+                self,
+                bootstyle="warning",
+                text=f"Enter Libre Creds for {self.coop_unformatted}",
+                font=(FONT_STYLE, 9)
+            )
+            self.description.grid(column=1, row=0, columnspan=3, pady=10, sticky="new")
+
+
+            self.username_label = Label(
+                self,
+                bootstyle="warning",
+                text="Username",
+                font=(FONT_STYLE, 9)
+            )
+            self.username_label.grid(padx=15, pady=10, column=0, row=1, sticky="se")
+            self.username = Entry(
+                self,
+                bootstyle="info"
+            )
+            self.username.grid(padx=15, pady=10, column=1, row=1, sticky="sw")
+
+
+            self.password_label = Label(
+                self,
+                bootstyle="warning",
+                text="Password",
+                font=(FONT_STYLE, 9)
+            )
+            self.password_label.grid(padx=10, pady=10, column=0, row=2, sticky="se")
+            self.password = Entry(
+                self,
+                bootstyle="info",
+                show="*"
+            )
+            self.password.grid(padx=10, pady=10, column=1, row=2, sticky="sw")
+
+
+            self.login_button = Button(
+                self,
+                bootstyle="info-outline",
+                text="Login",
+                cursor="hand2",
+                command=self.login
+            )
+            self.login_button.grid(padx=40, pady=20, column=0, row=3, columnspan=3, sticky="e")
+
+
+    def launch_browser(self):
+        options = ChromeOptions()
+        options.add_experimental_option("detach", True)
+        options.add_argument("--headless")
+        driver = Chrome(options=options, service=Service(ChromeDriverManager().install()))
+        driver.get(self.url)
+        return driver
+    
+    def login(self, ex_user=None, ex_pass=None):
+        uname = ex_user if ex_user else self.username.get()
+        pword = ex_pass if ex_pass else self.password.get()
+
+        self.browser.find_element(By.NAME, "username").send_keys(uname)
+        self.browser.find_element(By.NAME, "password").send_keys(pword)
+        self.browser.find_element(By.CSS_SELECTOR, ".btn-primary").click()
+        sleep(1)
+
+        try:
+            a = self.browser.find_element(By.NAME, "username").is_displayed()
+            b = self.browser.find_element(By.NAME, "password").is_displayed()
+        except NoSuchElementException:
+            self.logged_in(uname, pword)
+        else:
+            self.temp.config(bootstyle="danger", text="Invalid Credentials")
+            self.browser.refresh()
+            sleep(2)
+
+    def logged_in(self, u, p):
+        TinyActiveFrame(self.parent, self.browser, self.coop_unformatted, self.start_column, self.start_row).tkraise()
+        with open(self.libre_password_path, "w") as file:
+            file.write(f"{u},{p}".strip())
+
+
+class TinyActiveFrame(Labelframe):
+    def __init__(self, parent, browser, coop, start_column, start_row):
+        super().__init__(parent, bootstyle="info.TLabelframe", text=f" {coop} ")
+
+        self.browser = browser
+        self.newest_alert_xpath = "//*[@id=\"alertlog\"]/tbody/tr[1]"
+        self.main_thread = Thread(target=self.get_data)
+        self.stop_thread = False
+        self.coop = coop
+        self.parent = parent
+        self.start_column = start_column
+        self.start_row = start_row
+
+        self.alert_sounds = {
+            "FECC": "assets\\audio\\FECC_new_alert.wav",            #Connect2First
+            "LES": "assets\\audio\\LES_new_alert.wav",              #LexNet
+            "Empower": "assets\\audio\\Empower_new_alert.wav",      #Empower
+            "ClayCounty": "assets\\audio\\ClayCounty_new_alert.wav"         #ClayCounty
+        }
+
+        self.grid(
+            column = self.start_column,
+            row = self.start_row,
+            columnspan=3, 
+            rowspan=5, 
+            padx=40, 
+            pady=40, 
+            sticky="nsew"
+        )
+        self.columnconfigure((0, 1, 2), weight=1)
+        self.rowconfigure((0, 1, 2, 3, 4), weight=1)
+
+        self.description = Label(
+            self,
+            bootstyle="info",
+            text=f"Welcome to Monitor Buddy for {self.coop}",
+            font=(FONT_STYLE, 10)
+        )
+        self.description.grid(column=0, row=0, columnspan=2, padx=10, pady=20, sticky="new")
+
+        self.begin_button = Button(
+            self,
+            bootstyle="info-outline",
+            text="Start",
+            cursor="hand2",
+            command=self.change_button
+        )
+        self.begin_button.grid(padx=20, column=2, row=0, sticky="new")
+
+        self.timestamp_label = Label(
+            self,
+            bootstyle="info",
+            text="Timestamp: ",
+            font=(FONT_STYLE, 10)
+        )
+        self.timestamp_label.grid(column=0, row=1, padx=25, sticky="nsw")
+
+        self.timestamp = Label(
+            self,
+            bootstyle="warning",
+            text="",
+            font=(FONT_STYLE, 10)
+        )
+        self.timestamp.grid(column=1, row=1, columnspan=2, padx=10, sticky="wns")
+
+        self.device_label = Label(
+            self,
+            bootstyle="info",
+            text="Device: ",
+            font=(FONT_STYLE, 10)
+        )
+        self.device_label.grid(column=0, row=2, padx=25, sticky="nsw")
+
+        self.device = Label(
+            self,
+            bootstyle="warning",
+            text="",
+            font=(FONT_STYLE, 10)
+        )
+        self.device.grid(column=1, row=2, columnspan=2, padx=10, sticky="wns")
+
+        self.alert_label = Label(
+            self,
+            bootstyle="info",
+            text="Alert: ",
+            font=(FONT_STYLE, 10)
+        )
+        self.alert_label.grid(column=0, row=3, padx=25, sticky="nsw")
+
+        self.alert = Label(
+            self,
+            bootstyle="warning",
+            text="",
+            font=(FONT_STYLE, 10)
+        )
+        self.alert.grid(column=1, row=3, columnspan=2, padx=10, sticky="wns")
+
+        self.severity_label = Label(
+            self,
+            bootstyle="info",
+            text="Severity: ",
+            font=(FONT_STYLE, 10)
+        )
+        self.severity_label.grid(column=0, row=4, padx=25, sticky="nsw")
+
+        self.severity = Label(
+            self,
+            bootstyle="warning",
+            text="",
+            font=(FONT_STYLE, 10)
+        )
+        self.severity.grid(column=1, row=4, columnspan=2, padx=10, sticky="wns")
+
+    
+    def change_button(self):
+        button_text = self.begin_button.cget("text")
+        if button_text == "Start":
+            self.begin_button.config(text = "End")
+            self.main_thread.start()
+        elif button_text == "End":
+            self.begin_button.config(text = "Ended. Relaunch?")
+            self.stop_thread = True
+            self.browser.quit()
+        elif button_text == "Ended. Relaunch?":
+            self.begin_button.config(bootstyle="warning", text="Please hold...")
+            sleep(1)
+            TinyMonitoringFrame(self.parent, self.coop, self.start_column, self.start_row).tkraise()
+
+
+    def get_data(self):
+
+        last_device = ""
+        last_alert = ""
+        while not self.stop_thread:
+            time_to_sleep = 10
+            try:
+                WebDriverWait(self.browser, 20).until(expected_conditions.presence_of_element_located((By.XPATH, self.newest_alert_xpath)))
+                newest_entry = self.browser.find_element(By.XPATH, self.newest_alert_xpath)
+            except TimeoutException:
+                print("Timed Out. Refreshing")
+            except Exception as e:
+                self.stop_thread = True
+                error(format_exc(e))
+            else:
+                data = newest_entry.text
+                if data == 'Loading...':
+                    time_to_sleep = 4
+                else:
+                    entries = [entry for entry in data.split("\n") if entry != ""]
+                    timestamp, device, rest = entries
+                    raw_alert = rest.split(" ")
+                    severity = raw_alert.pop()
+                    formatted_alert = " ".join(raw_alert)
+
+                    if formatted_alert != last_alert or device != last_device:
+                        self.update_display(timestamp, device, formatted_alert, severity)
+                        PlaySound(self.alert_sounds[self.coop], 0)
+                        last_alert = formatted_alert
+                        last_device = device
+                        print(last_alert, last_device)
+            if not self.stop_thread:
+                self.browser.refresh()
+                sleep(time_to_sleep)
+        #Gracefully shut down browser when breaking  
+        self.browser.quit()
+
+    def update_display(self, timestamp, device, alert, severity):
+        self.timestamp.config(text=timestamp)
+        self.device.config(text=device)
+        self.alert.config(text=alert)
+        self.severity.config(text=severity, bootstyle="danger" if severity == "critical" else "warning")
+
+
 class TestFrame(Labelframe):
     def __init__(self):
         super().__init__(bootstyle="warning", text=" Testing Frame ")
@@ -564,38 +851,7 @@ class TestFrame(Labelframe):
         self.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
         self.rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8, 9), weight=1)
 
-        self.monitor_frame_1 = Labelframe(
-            self,
-            bootstyle="info.TLabelframe",
-            text=" FECC "
-        )
-        self.monitor_frame_1.grid(column=0, row=0, columnspan=3, rowspan=5, padx=30, pady=30, sticky="nsew")
-        self.monitor_frame_1.columnconfigure((0, 1, 2), weight=1)
-        self.monitor_frame_1.rowconfigure((0, 1, 2, 3, 4), weight=1)
-
-        self.monitor_frame_2 = Labelframe(
-            self,
-            bootstyle="info.TLabelframe",
-            text=" LES "
-        )
-        self.monitor_frame_2.grid(column=3, row=0, columnspan=3, rowspan=5, padx=30, pady=30, sticky="nsew")
-        self.monitor_frame_2.columnconfigure((0, 1, 2), weight=1)
-        self.monitor_frame_2.rowconfigure((0, 1, 2, 3, 4), weight=1)
-
-        self.monitor_frame_3 = Labelframe(
-            self,
-            bootstyle="info.TLabelframe",
-            text=" Empower "
-        )
-        self.monitor_frame_3.grid(column=0, row=5, columnspan=3, rowspan=5, padx=30, pady=30, sticky="nsew")
-        self.monitor_frame_3.columnconfigure((0, 1, 2), weight=1)
-        self.monitor_frame_3.rowconfigure((0, 1, 2, 3, 4), weight=1)
-
-        self.monitor_frame_4 = Labelframe(
-            self,
-            bootstyle="info.TLabelframe",
-            text=" ClayCounty "
-        )
-        self.monitor_frame_4.grid(column=3, row=5, columnspan=3, rowspan=5, padx=30, pady=30, sticky="nsew")
-        self.monitor_frame_4.columnconfigure((0, 1, 2), weight=1)
-        self.monitor_frame_4.rowconfigure((0, 1, 2, 3, 4), weight=1)
+        self.fecc_frame = TinyMonitoringFrame(self, "FECC", 0, 0)
+        self.les_frame = TinyMonitoringFrame(self, "LES", 3, 0)
+        self.empower_frame = TinyMonitoringFrame(self, "Empower", 0, 5)
+        self.clay_frame = TinyMonitoringFrame(self, "ClayCounty", 3, 5)
