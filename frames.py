@@ -234,7 +234,7 @@ class MonitorBuddyFrame(Labelframe):
 
             self.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
             self.rowconfigure((0, 1, 2, 3, 4), weight=1)
-            
+
             self.description = Label(
                 self,
                 bootstyle="info",
@@ -317,11 +317,9 @@ class MonitorBuddyFrame(Labelframe):
             file.write(f"{u},{p}".strip())
 
 
-
 class MonitoringActiveFrame(Labelframe):
     def __init__(self, browser):
         super().__init__(bootstyle="warning", text=" Monitor Buddy ♡ ")
-        sleep(1)
         self.browser = browser
         self.newest_alert_xpath = "//*[@id=\"alertlog\"]/tbody/tr[1]"
         self.main_thread = Thread(target=self.get_data)
@@ -473,7 +471,7 @@ class MonitoringActiveFrame(Labelframe):
 
                     if formatted_alert != last_alert or device != last_device:
                         self.update_display(timestamp, device, formatted_alert, severity)
-                        PlaySound("assets\\audio\\C2FI_New_Alert.wav", 0)
+                        PlaySound("assets\\audio\\FECC_new_alert.wav", 0)
                         last_alert = formatted_alert
                         last_device = device
                         print(last_alert, last_device)
@@ -633,6 +631,13 @@ class TinyMonitoringFrame(Labelframe):
         options = ChromeOptions()
         options.add_experimental_option("detach", True)
         options.add_argument("--headless")
+        options.add_argument("start-maximized")
+        options.add_argument("disable-infobars")
+        options.add_argument("--disable-extensions")
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-application-cache')
+        options.add_argument('--disable-gpu')
+        options.add_argument("--disable-dev-shm-usage")
         driver = Chrome(options=options, service=Service(ChromeDriverManager().install()))
         driver.get(self.url)
         return driver
@@ -681,6 +686,20 @@ class TinyActiveFrame(Labelframe):
             "Empower": "assets\\audio\\Empower_new_alert.wav",      #Empower
             "ClayCounty": "assets\\audio\\ClayCounty_new_alert.wav"         #ClayCounty
         }
+        self.months = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "June",
+            "July",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec"
+        ]
 
         self.grid(
             column = self.start_column,
@@ -700,7 +719,7 @@ class TinyActiveFrame(Labelframe):
             text=f"Welcome to Monitor Buddy for {self.coop}",
             font=(FONT_STYLE, 10)
         )
-        self.description.grid(column=0, row=0, columnspan=2, padx=10, pady=20, sticky="new")
+        self.description.grid(column=0, row=0, columnspan=2, padx=20, pady=10, sticky="new")
 
         self.begin_button = Button(
             self,
@@ -709,71 +728,71 @@ class TinyActiveFrame(Labelframe):
             cursor="hand2",
             command=self.change_button
         )
-        self.begin_button.grid(padx=20, column=2, row=0, sticky="new")
+        self.begin_button.grid(padx=30, pady=10, column=2, row=0, sticky="ne")
 
         self.timestamp_label = Label(
             self,
             bootstyle="info",
             text="Timestamp: ",
-            font=(FONT_STYLE, 10)
+            font=(FONT_STYLE, 11)
         )
-        self.timestamp_label.grid(column=0, row=1, padx=25, sticky="nsw")
+        self.timestamp_label.grid(column=0, row=1, pady=5, padx=25, sticky="nsw")
 
         self.timestamp = Label(
             self,
             bootstyle="warning",
             text="",
-            font=(FONT_STYLE, 10)
+            font=(FONT_STYLE, 11)
         )
-        self.timestamp.grid(column=1, row=1, columnspan=2, padx=10, sticky="wns")
+        self.timestamp.grid(column=1, row=1, columnspan=2, pady=5, padx=10, sticky="wns")
 
         self.device_label = Label(
             self,
             bootstyle="info",
             text="Device: ",
-            font=(FONT_STYLE, 10)
+            font=(FONT_STYLE, 11)
         )
-        self.device_label.grid(column=0, row=2, padx=25, sticky="nsw")
+        self.device_label.grid(column=0, row=2, pady=5, padx=25, sticky="nsw")
 
         self.device = Label(
             self,
             bootstyle="warning",
             text="",
-            font=(FONT_STYLE, 10)
+            font=(FONT_STYLE, 11)
         )
-        self.device.grid(column=1, row=2, columnspan=2, padx=10, sticky="wns")
+        self.device.grid(column=1, row=2, columnspan=2, pady=5, padx=10, sticky="wns")
 
         self.alert_label = Label(
             self,
             bootstyle="info",
             text="Alert: ",
-            font=(FONT_STYLE, 10)
+            font=(FONT_STYLE, 11)
         )
-        self.alert_label.grid(column=0, row=3, padx=25, sticky="nsw")
+        self.alert_label.grid(column=0, row=3, pady=5, padx=25, sticky="nsw")
 
         self.alert = Label(
             self,
             bootstyle="warning",
             text="",
-            font=(FONT_STYLE, 10)
+            font=(FONT_STYLE, 11)
         )
-        self.alert.grid(column=1, row=3, columnspan=2, padx=10, sticky="wns")
+        self.alert.grid(column=1, row=3, columnspan=2, pady=5, padx=10, sticky="wns")
 
         self.severity_label = Label(
             self,
             bootstyle="info",
             text="Severity: ",
-            font=(FONT_STYLE, 10)
+            font=(FONT_STYLE, 11)
         )
-        self.severity_label.grid(column=0, row=4, padx=25, sticky="nsw")
+        self.severity_label.grid(column=0, row=4, pady=5, padx=25, sticky="nsw")
 
         self.severity = Label(
             self,
             bootstyle="warning",
             text="",
-            font=(FONT_STYLE, 10)
+            font=(FONT_STYLE, 11)
         )
-        self.severity.grid(column=1, row=4, columnspan=2, padx=10, sticky="wns")
+        self.severity.grid(column=1, row=4, columnspan=2, pady=5, padx=10, sticky="wns")
 
     
     def change_button(self):
@@ -829,15 +848,26 @@ class TinyActiveFrame(Labelframe):
         self.browser.quit()
 
     def update_display(self, timestamp, device, alert, severity):
-        self.timestamp.config(text=timestamp)
+        date, time = timestamp.split(" ")
+        year, month, day = date.split("-")
+        hour, minute, second = time.split(":")
+        month_word = self.months[int(month) - 1]
+        hour = int(hour)
+        if hour > 12:
+            hour -= 12
+            tense = "P.M."
+        else:
+            tense = "A.M."
+
+        self.timestamp.config(text=f"{month_word} {day}, {year} at {hour}:{minute} {tense}")
         self.device.config(text=device)
         self.alert.config(text=alert)
-        self.severity.config(text=severity, bootstyle="danger" if severity == "critical" else "warning")
+        self.severity.config(text=severity.upper(), bootstyle="danger" if severity == "critical" else "warning")
 
 
-class TestFrame(Labelframe):
+class MonitorBuddyEnhanced(Labelframe):
     def __init__(self):
-        super().__init__(bootstyle="warning", text=" Testing Frame ")
+        super().__init__(bootstyle="warning", text=" Monitor 4 at once? A bit overbearing but ok boss ")
 
         self.grid(
             column=0, 

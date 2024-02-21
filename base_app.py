@@ -81,9 +81,9 @@ class BaseApp(Window):
         self.test_frame_button = Button(
             self.tools_frame,
             bootstyle="info.Outline.TButton",
-            text=" Test Frame ",
+            text=" Monitor Buddy++ ",
             cursor="hand2",
-            command= lambda: TestFrame().tkraise()
+            command= lambda: MonitorBuddyEnhanced().tkraise()
         )
         self.test_frame_button.grid(row=2, column=0, columnspan=3, sticky="nsew", pady=25, padx=40)
 
@@ -99,13 +99,13 @@ class BaseApp(Window):
             temp.grid(row=i, column=0, columnspan=3, sticky="nsew", pady=25, padx=40)
 
         
-        self.monitor_buddy_button = Button(
+        self.dashboard_button = Button(
             self.tools_frame,
             bootstyle="info.Outline.TButton",
             text=" Back to Dashboard ",
             cursor="hand2",
             command= lambda: WelcomeFrame().tkraise()
         )
-        self.monitor_buddy_button.grid(row=len(self.button_list) - 1, column=0, columnspan=3, sticky="nsew", pady=25, padx=40)
+        self.dashboard_button.grid(row=len(self.button_list) - 1, column=0, columnspan=3, sticky="nsew", pady=25, padx=40)
 
         WelcomeFrame().tkraise()
