@@ -1,22 +1,22 @@
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from selenium.webdriver.support import expected_conditions
 from ttkbootstrap import Labelframe, Label, Entry, Button
-from settings import *
+from selenium.webdriver.support.wait import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver import Chrome, ChromeOptions
+from selenium.webdriver.common.by import By
+from datetime import date, datetime
 from datetime import datetime
 from threading import Thread
-from selenium.webdriver import Chrome, ChromeOptions
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions
-from datetime import date, datetime
-from time import sleep
-from subprocess import check_output
 from winsound import PlaySound, Beep
-from os.path import isfile
-from traceback import format_exc
-from logging import error
+from subprocess import check_output
 from psutil import virtual_memory
+from traceback import format_exc
+from os.path import isfile
+from logging import error
+from time import sleep
+from settings import *
 
 def launch_browser(url):
     options = ChromeOptions()
@@ -29,13 +29,9 @@ def launch_browser(url):
     options.add_argument('--disable-gpu')
     options.add_argument("--disable-dev-shm-usage")
     driver = Chrome(options=options, service=Service(ChromeDriverManager().install()))
-    driver.execute_cdp_cmd("Network.setCacheDisabled", {"cacheDisabled":True})
+    driver.execute_cdp_cmd("Network.setCacheDisabled", {"cacheDisabled": True})
     driver.get(url)
     return driver
-
-
-def get_refresh_time(curr_minute):
-    return curr_minute + 30 if curr_minute < 30 else curr_minute - 30
 
 
 class PingerFrame(Labelframe):
@@ -868,9 +864,8 @@ class TinyActiveFrame(Labelframe):
                     end_time_string = datetime.now().strftime("%H:%M:%S")
                     print(f"\nFull restart completed at: {end_time_string}")
                     print(f"New Memory Usage: {virtual_memory()[2]}%\n")
-                    Beep(100, 1500)
-                    Beep(100, 1500)
-
+                    for _ in range(3):
+                        Beep(100, 1000)
                 else:
                     self.browser.refresh()
                     sleep(time_to_sleep)
