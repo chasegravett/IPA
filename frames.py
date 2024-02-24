@@ -6,15 +6,36 @@ from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions
+from datetime import date, datetime
 from time import sleep
 from subprocess import check_output
-from winsound import PlaySound
+from winsound import PlaySound, Beep
 from os.path import isfile
 from traceback import format_exc
 from logging import error
+from psutil import virtual_memory
+
+def launch_browser(url):
+    options = ChromeOptions()
+    options.add_experimental_option("detach", True)
+    options.add_argument("--headless")
+    options.add_argument("disable-infobars")
+    options.add_argument("--disable-extensions")
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-application-cache')
+    options.add_argument('--disable-gpu')
+    options.add_argument("--disable-dev-shm-usage")
+    driver = Chrome(options=options, service=Service(ChromeDriverManager().install()))
+    driver.execute_cdp_cmd("Network.setCacheDisabled", {"cacheDisabled":True})
+    driver.get(url)
+    return driver
+
+
+def get_refresh_time(curr_minute):
+    return curr_minute + 30 if curr_minute < 30 else curr_minute - 30
 
 
 class PingerFrame(Labelframe):
@@ -368,7 +389,7 @@ class MonitoringActiveFrame(Labelframe):
             self.recent_alert_frame,
             bootstyle="info",
             text="Timestamp: ",
-            font=(FONT_STYLE, 12)
+            font=(FONT_STYLE, 10)
         )
         self.timestamp_label.grid(column=0, row=0, padx=25, sticky="nsw")
 
@@ -384,7 +405,7 @@ class MonitoringActiveFrame(Labelframe):
             self.recent_alert_frame,
             bootstyle="info",
             text="Device: ",
-            font=(FONT_STYLE, 12)
+            font=(FONT_STYLE, 10)
         )
         self.device_label.grid(column=0, row=1, padx=25, sticky="nsw")
 
@@ -400,7 +421,7 @@ class MonitoringActiveFrame(Labelframe):
             self.recent_alert_frame,
             bootstyle="info",
             text="Alert: ",
-            font=(FONT_STYLE, 12)
+            font=(FONT_STYLE, 10)
         )
         self.alert_label.grid(column=0, row=2, padx=25, sticky="nsw")
 
@@ -416,7 +437,7 @@ class MonitoringActiveFrame(Labelframe):
             self.recent_alert_frame,
             bootstyle="info",
             text="Severity: ",
-            font=(FONT_STYLE, 12)
+            font=(FONT_STYLE, 10)
         )
         self.severity_label.grid(column=0, row=3, padx=25, sticky="nsw")
 
@@ -449,15 +470,19 @@ class MonitoringActiveFrame(Labelframe):
         last_device = ""
         last_alert = ""
         while not self.stop_thread:
-            time_to_sleep = 10
+            time_to_sleep = 12
             try:
                 WebDriverWait(self.browser, 20).until(expected_conditions.presence_of_element_located((By.XPATH, self.newest_alert_xpath)))
                 newest_entry = self.browser.find_element(By.XPATH, self.newest_alert_xpath)
             except TimeoutException:
-                print("Timed Out. Refreshing")
-            except Exception as e:
+                print("\n\tTimed Out. Refreshing...\n")
+            except WebDriverException as err:
+                print(f"\n\tError encountered with Web Driver:\n\t\t{err}\n")
                 self.stop_thread = True
+            except Exception as e:
+                print("\nUnknown Error:\n")
                 error(format_exc(e))
+                self.stop_thread = True
             else:
                 data = newest_entry.text
                 if data == 'Loading...':
@@ -474,11 +499,11 @@ class MonitoringActiveFrame(Labelframe):
                         PlaySound("assets\\audio\\FECC_new_alert.wav", 0)
                         last_alert = formatted_alert
                         last_device = device
-                        print(last_alert, last_device)
             if not self.stop_thread:
                 self.browser.refresh()
                 sleep(time_to_sleep)
-        #Gracefully shut down browser when breaking  
+        #Gracefully shut down browser when breaking
+        self.browser.close()
         self.browser.quit()
         
 
@@ -560,8 +585,6 @@ class TinyMonitoringFrame(Labelframe):
         self.libre_password_path = f"creds\\libre\\{self.coop}.txt"
         self.parent = parent
 
-        self.browser = self.launch_browser()
-
         self.grid(
             column = self.start_column,
             row = self.start_row,
@@ -626,23 +649,9 @@ class TinyMonitoringFrame(Labelframe):
             )
             self.login_button.grid(padx=40, pady=20, column=0, row=3, columnspan=3, sticky="e")
 
-
-    def launch_browser(self):
-        options = ChromeOptions()
-        options.add_experimental_option("detach", True)
-        options.add_argument("--headless")
-        options.add_argument("start-maximized")
-        options.add_argument("disable-infobars")
-        options.add_argument("--disable-extensions")
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-application-cache')
-        options.add_argument('--disable-gpu')
-        options.add_argument("--disable-dev-shm-usage")
-        driver = Chrome(options=options, service=Service(ChromeDriverManager().install()))
-        driver.get(self.url)
-        return driver
     
     def login(self, ex_user=None, ex_pass=None):
+        self.browser = launch_browser(self.url)
         uname = ex_user if ex_user else self.username.get()
         pword = ex_pass if ex_pass else self.password.get()
 
@@ -662,29 +671,32 @@ class TinyMonitoringFrame(Labelframe):
             sleep(2)
 
     def logged_in(self, u, p):
-        TinyActiveFrame(self.parent, self.browser, self.coop_unformatted, self.start_column, self.start_row).tkraise()
+        TinyActiveFrame(self.parent, self.browser, self.coop_unformatted, self.start_column, self.start_row, self.url, u, p).tkraise()
         with open(self.libre_password_path, "w") as file:
             file.write(f"{u},{p}".strip())
 
 
 class TinyActiveFrame(Labelframe):
-    def __init__(self, parent, browser, coop, start_column, start_row):
+    def __init__(self, parent, browser, coop, start_column, start_row, url, uname, pword):
         super().__init__(parent, bootstyle="info.TLabelframe", text=f" {coop} ")
 
-        self.browser = browser
-        self.newest_alert_xpath = "//*[@id=\"alertlog\"]/tbody/tr[1]"
-        self.main_thread = Thread(target=self.get_data)
-        self.stop_thread = False
-        self.coop = coop
         self.parent = parent
+        self.browser = browser
+        self.coop = coop
         self.start_column = start_column
         self.start_row = start_row
+        self.url = url
+        self.username = uname
+        self.password = pword
+        self.stop_thread = False
+        self.newest_alert_xpath = "//*[@id=\"alertlog\"]/tbody/tr[1]"
+        self.main_thread = Thread(target=self.get_data, daemon=True)
 
         self.alert_sounds = {
             "FECC": "assets\\audio\\FECC_new_alert.wav",            #Connect2First
             "LES": "assets\\audio\\LES_new_alert.wav",              #LexNet
             "Empower": "assets\\audio\\Empower_new_alert.wav",      #Empower
-            "ClayCounty": "assets\\audio\\ClayCounty_new_alert.wav"         #ClayCounty
+            "ClayCounty": "assets\\audio\\ClayCounty_new_alert.wav" #ClayCounty
         }
         self.months = [
             "Jan",
@@ -811,10 +823,10 @@ class TinyActiveFrame(Labelframe):
 
 
     def get_data(self):
-
         last_device = ""
         last_alert = ""
         while not self.stop_thread:
+            current_memory_usage = virtual_memory()[2]      #int value of percentage used 
             time_to_sleep = 10
             try:
                 WebDriverWait(self.browser, 20).until(expected_conditions.presence_of_element_located((By.XPATH, self.newest_alert_xpath)))
@@ -841,28 +853,57 @@ class TinyActiveFrame(Labelframe):
                         last_alert = formatted_alert
                         last_device = device
                         print(last_alert, last_device)
+            
             if not self.stop_thread:
-                self.browser.refresh()
-                sleep(time_to_sleep)
-        #Gracefully shut down browser when breaking  
+                if current_memory_usage >= 90:
+                    print(f"\nCurrent Memory Usage: {current_memory_usage}%")
+                    start_time_string = datetime.now().strftime("%H:%M:%S")
+                    print(f"Initiating restart of browsers to keep memory usage low. Started at: {start_time_string}\n")
+                    self.browser.quit()
+                    sleep(3)
+                    self.browser = launch_browser(self.url)
+                    sleep(5)
+                    self.login_after_restart()
+                    sleep(2)
+                    end_time_string = datetime.now().strftime("%H:%M:%S")
+                    print(f"\nFull restart completed at: {end_time_string}")
+                    print(f"New Memory Usage: {virtual_memory()[2]}%\n")
+                    Beep(100, 1500)
+                    Beep(100, 1500)
+
+                else:
+                    self.browser.refresh()
+                    sleep(time_to_sleep)
+        #Gracefully shut down browser when breaking
         self.browser.quit()
 
     def update_display(self, timestamp, device, alert, severity):
-        date, time = timestamp.split(" ")
-        year, month, day = date.split("-")
+        my_date, time = timestamp.split(" ")
+        year, month, day = my_date.split("-")
         hour, minute, second = time.split(":")
         month_word = self.months[int(month) - 1]
-        hour = int(hour)
+        hour = int(hour) if hour != "0" else 12
         if hour > 12:
             hour -= 12
             tense = "P.M."
         else:
             tense = "A.M."
+        
+        detected_date = str(date.today())
+        if my_date == detected_date:
+            self.timestamp.config(text=f"Today at {hour if hour != 0 else 12}:{minute} {tense}")
+        else:
+            self.timestamp.config(text=f"{month_word} {day}, {year} at {hour if hour != 0 else 12}:{minute} {tense}")
 
-        self.timestamp.config(text=f"{month_word} {day}, {year} at {hour}:{minute} {tense}")
         self.device.config(text=device)
         self.alert.config(text=alert)
         self.severity.config(text=severity.upper(), bootstyle="danger" if severity == "critical" else "warning")
+
+    def login_after_restart(self):
+        self.browser.find_element(By.NAME, "username").send_keys(self.username)
+        self.browser.find_element(By.NAME, "password").send_keys(self.password)
+        self.browser.find_element(By.CSS_SELECTOR, ".btn-primary").click()
+        sleep(1)
 
 
 class MonitorBuddyEnhanced(Labelframe):
