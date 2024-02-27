@@ -34,6 +34,25 @@ def launch_browser(url):
     return driver
 
 
+def get_timestamp_string(timestamp):
+    my_date, time = timestamp.split(" ")
+    year, month, day = my_date.split("-")
+    hour, minute, second = time.split(":")
+    month_word = MONTHS[int(month) - 1]
+    hour = int(hour) if hour != "0" else 12
+    if hour > 12:
+        hour -= 12
+        tense = "P.M."
+    else:
+        tense = "A.M."
+    
+    detected_date = str(date.today())
+    if my_date == detected_date:
+        return f"Today at {hour if hour != 0 else 12}:{minute} {tense}"
+    else:
+        return f"{month_word} {day}, {year} at {hour if hour != 0 else 12}:{minute} {tense}"
+
+
 class PingerFrame(Labelframe):
     def __init__(self):
         super().__init__(bootstyle="warning", text=" Pinger ")
@@ -694,20 +713,13 @@ class TinyActiveFrame(Labelframe):
             "Empower": "assets\\audio\\Empower_new_alert.wav",      #Empower
             "ClayCounty": "assets\\audio\\ClayCounty_new_alert.wav" #ClayCounty
         }
-        self.months = [
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "June",
-            "July",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec"
-        ]
+
+        self.resolved_sounds = {
+            "FECC": "assets\\audio\\FECC_resolved_alert.wav",            #Connect2First
+            "LES": "",              #LexNet
+            "Empower": "",      #Empower
+            "ClayCounty": "" #ClayCounty
+        }
 
         self.grid(
             column = self.start_column,
@@ -821,14 +833,23 @@ class TinyActiveFrame(Labelframe):
     def get_data(self):
         last_device = ""
         last_alert = ""
+        last_timestamp = ""
+        last_resolved_alert = ""
         while not self.stop_thread:
-            current_memory_usage = virtual_memory()[2]      #int value of percentage used 
+            global need_ram_reset
+            current_memory_usage = virtual_memory()[2]
+            if  current_memory_usage >= 90:
+                need_ram_reset = True
             time_to_sleep = 10
+
             try:
                 WebDriverWait(self.browser, 20).until(expected_conditions.presence_of_element_located((By.XPATH, self.newest_alert_xpath)))
                 newest_entry = self.browser.find_element(By.XPATH, self.newest_alert_xpath)
             except TimeoutException:
                 print("Timed Out. Refreshing")
+            except WebDriverException as e:
+                print("\n\nWeb Driver Exception...\n\n")
+                self.restart_browser(current_memory_usage)
             except Exception as e:
                 self.stop_thread = True
                 error(format_exc(e))
@@ -843,55 +864,35 @@ class TinyActiveFrame(Labelframe):
                     severity = raw_alert.pop()
                     formatted_alert = " ".join(raw_alert)
 
-                    if formatted_alert != last_alert or device != last_device:
+                    if (formatted_alert != last_alert or device != last_device) and formatted_alert != last_resolved_alert and timestamp != last_timestamp:
                         self.update_display(timestamp, device, formatted_alert, severity)
                         PlaySound(self.alert_sounds[self.coop], 0)
                         last_alert = formatted_alert
                         last_device = device
-                        print(last_alert, last_device)
+                        last_timestamp = timestamp
+                    elif formatted_alert == last_alert and device == last_device and timestamp != last_timestamp:
+                        self.resolve_alert_display(timestamp)
+                        last_alert = ""
+                        last_device = ""
+                        last_timestamp = timestamp
+                        last_resolved_alert = formatted_alert
+                        PlaySound(self.resolved_sounds[self.coop], 0)
             
             if not self.stop_thread:
-                if current_memory_usage >= 90:
-                    print(f"\nCurrent Memory Usage: {current_memory_usage}%")
-                    start_time_string = datetime.now().strftime("%H:%M:%S")
-                    print(f"Initiating restart of browsers to keep memory usage low. Started at: {start_time_string}\n")
-                    self.browser.quit()
-                    sleep(3)
-                    self.browser = launch_browser(self.url)
-                    sleep(5)
-                    self.login_after_restart()
-                    sleep(2)
-                    end_time_string = datetime.now().strftime("%H:%M:%S")
-                    print(f"\nFull restart completed at: {end_time_string}")
-                    print(f"New Memory Usage: {virtual_memory()[2]}%\n")
-                    for _ in range(3):
-                        Beep(100, 1000)
+                if need_ram_reset:
+                    self.restart_browser(current_memory_usage)
                 else:
                     self.browser.refresh()
                     sleep(time_to_sleep)
         #Gracefully shut down browser when breaking
+        self.browser.close()
         self.browser.quit()
 
     def update_display(self, timestamp, device, alert, severity):
-        my_date, time = timestamp.split(" ")
-        year, month, day = my_date.split("-")
-        hour, minute, second = time.split(":")
-        month_word = self.months[int(month) - 1]
-        hour = int(hour) if hour != "0" else 12
-        if hour > 12:
-            hour -= 12
-            tense = "P.M."
-        else:
-            tense = "A.M."
-        
-        detected_date = str(date.today())
-        if my_date == detected_date:
-            self.timestamp.config(text=f"Today at {hour if hour != 0 else 12}:{minute} {tense}")
-        else:
-            self.timestamp.config(text=f"{month_word} {day}, {year} at {hour if hour != 0 else 12}:{minute} {tense}")
-
-        self.device.config(text=device)
-        self.alert.config(text=alert)
+        time_string = get_timestamp_string(timestamp)
+        self.timestamp.config(bootstyle="warning", text=time_string)
+        self.device.config(bootstyle="warning", text=device)
+        self.alert.config(bootstyle="warning", text=alert)
         self.severity.config(text=severity.upper(), bootstyle="danger" if severity == "critical" else "warning")
 
     def login_after_restart(self):
@@ -899,6 +900,38 @@ class TinyActiveFrame(Labelframe):
         self.browser.find_element(By.NAME, "password").send_keys(self.password)
         self.browser.find_element(By.CSS_SELECTOR, ".btn-primary").click()
         sleep(1)
+
+
+    def restart_browser(self, ram):
+        global need_ram_reset
+        print(f"\nCurrent Memory Usage: {ram}%")
+        start_time_string = datetime.now().strftime("%H:%M:%S")
+        print(f"Initiating restart of browsers to keep memory usage low. or for WDException. Started at: {start_time_string}\n")
+        self.browser.close()
+        sleep(2)
+        self.browser.quit()
+        sleep(2)
+        self.browser = launch_browser(self.url)
+        sleep(5)
+        self.login_after_restart()
+        sleep(2)
+        end_time_string = datetime.now().strftime("%H:%M:%S")
+        print(f"\nFull restart completed at: {end_time_string}")
+        print(f"New Memory Usage: {virtual_memory()[2]}%\n")
+
+        if need_ram_reset:
+            need_ram_reset = False
+        for _ in range(3):
+            Beep(100, 1000)
+
+
+    def resolve_alert_display(self, tstamp):
+        time_string = get_timestamp_string(tstamp)
+
+        self.device.config(bootstyle="success")
+        self.alert.config(bootstyle="success")
+        self.severity.config(bootstyle="success")
+        self.timestamp.config(bootstyle="success", text= f"Resolved {time_string}")
 
 
 class MonitorBuddyEnhanced(Labelframe):
