@@ -762,7 +762,7 @@ class TinyActiveFrame(Labelframe):
             self,
             bootstyle="warning",
             text="",
-            font=(FONT_STYLE, 11)
+            font=(FONT_STYLE, 10)
         )
         self.timestamp.grid(column=1, row=1, columnspan=2, pady=5, padx=10, sticky="wns")
 
@@ -778,7 +778,7 @@ class TinyActiveFrame(Labelframe):
             self,
             bootstyle="warning",
             text="",
-            font=(FONT_STYLE, 11)
+            font=(FONT_STYLE, 10)
         )
         self.device.grid(column=1, row=2, columnspan=2, pady=5, padx=10, sticky="wns")
 
@@ -794,7 +794,7 @@ class TinyActiveFrame(Labelframe):
             self,
             bootstyle="warning",
             text="",
-            font=(FONT_STYLE, 11)
+            font=(FONT_STYLE, 10)
         )
         self.alert.grid(column=1, row=3, columnspan=2, pady=5, padx=10, sticky="wns")
 
@@ -810,7 +810,7 @@ class TinyActiveFrame(Labelframe):
             self,
             bootstyle="warning",
             text="",
-            font=(FONT_STYLE, 11)
+            font=(FONT_STYLE, 10)
         )
         self.severity.grid(column=1, row=4, columnspan=2, pady=5, padx=10, sticky="wns")
 
@@ -834,7 +834,7 @@ class TinyActiveFrame(Labelframe):
         last_device = ""
         last_alert = ""
         last_timestamp = ""
-        last_resolved_alert = ""
+        # last_resolved_alert = ""
         while not self.stop_thread:
             global need_ram_reset
             current_memory_usage = virtual_memory()[2]
@@ -846,10 +846,11 @@ class TinyActiveFrame(Labelframe):
                 WebDriverWait(self.browser, 20).until(expected_conditions.presence_of_element_located((By.XPATH, self.newest_alert_xpath)))
                 newest_entry = self.browser.find_element(By.XPATH, self.newest_alert_xpath)
             except TimeoutException:
-                print("Timed Out. Refreshing")
+                print("\n\nTimed Out. Refreshing\n\n")
+                self.restart_browser()
             except WebDriverException as e:
                 print("\n\nWeb Driver Exception...\n\n")
-                self.restart_browser(current_memory_usage)
+                self.restart_browser()
             except Exception as e:
                 self.stop_thread = True
                 error(format_exc(e))
@@ -859,31 +860,32 @@ class TinyActiveFrame(Labelframe):
                     time_to_sleep = 4
                 else:
                     entries = [entry for entry in data.split("\n") if entry != ""]
-                    timestamp, device, rest = entries
-                    raw_alert = rest.split(" ")
-                    severity = raw_alert.pop()
-                    formatted_alert = " ".join(raw_alert)
+                    try:
+                        timestamp, device, rest = entries
+                    except ValueError as e:
+                        print("\nValue Error:")
+                        print(e)
+                        print(f"Entries came through as:\n{entries}\n")
+                        print("Restarting...\n\n")
+                        self.restart_browser()
+                    else:
+                        raw_alert = rest.split(" ")
+                        severity = raw_alert.pop()
+                        formatted_alert = " ".join(raw_alert)
 
-                    if (formatted_alert != last_alert or device != last_device) and formatted_alert != last_resolved_alert and timestamp != last_timestamp:
-                        self.update_display(timestamp, device, formatted_alert, severity)
-                        PlaySound(self.alert_sounds[self.coop], 0)
-                        last_alert = formatted_alert
-                        last_device = device
-                        last_timestamp = timestamp
-                    elif formatted_alert == last_alert and device == last_device and timestamp != last_timestamp:
-                        self.resolve_alert_display(timestamp)
-                        last_alert = ""
-                        last_device = ""
-                        last_timestamp = timestamp
-                        last_resolved_alert = formatted_alert
-                        PlaySound(self.resolved_sounds[self.coop], 0)
+                        if formatted_alert != last_alert or device != last_device or timestamp != last_timestamp:
+                            self.update_display(timestamp, device, formatted_alert, severity)
+                            PlaySound(self.alert_sounds[self.coop], 0)
+                            last_alert = formatted_alert
+                            last_device = device
+                            last_timestamp = timestamp
             
-            if not self.stop_thread:
-                if need_ram_reset:
-                    self.restart_browser(current_memory_usage)
-                else:
-                    self.browser.refresh()
-                    sleep(time_to_sleep)
+                        if not self.stop_thread:
+                            if need_ram_reset:
+                                self.restart_browser(current_memory_usage)
+                            else:
+                                self.browser.refresh()
+                                sleep(time_to_sleep)
         #Gracefully shut down browser when breaking
         self.browser.close()
         self.browser.quit()
@@ -902,22 +904,23 @@ class TinyActiveFrame(Labelframe):
         sleep(1)
 
 
-    def restart_browser(self, ram):
+    def restart_browser(self, ram=None):
         global need_ram_reset
-        print(f"\nCurrent Memory Usage: {ram}%")
-        start_time_string = datetime.now().strftime("%H:%M:%S")
-        print(f"Initiating restart of browsers to keep memory usage low. or for WDException. Started at: {start_time_string}\n")
-        self.browser.close()
-        sleep(2)
+        if ram:
+            print(f"\nCurrent Memory Usage: {ram}%")
+            start_time_string = datetime.now().strftime("%H:%M:%S")
+            print(f"Initiating restart of browsers to keep memory usage low. or for WDException. Started at: {start_time_string}\n")
+        sleep(1)
         self.browser.quit()
         sleep(2)
         self.browser = launch_browser(self.url)
-        sleep(5)
+        sleep(10)
         self.login_after_restart()
         sleep(2)
-        end_time_string = datetime.now().strftime("%H:%M:%S")
-        print(f"\nFull restart completed at: {end_time_string}")
-        print(f"New Memory Usage: {virtual_memory()[2]}%\n")
+        if ram:
+            end_time_string = datetime.now().strftime("%H:%M:%S")
+            print(f"\nFull restart completed at: {end_time_string}")
+            print(f"New Memory Usage: {virtual_memory()[2]}%\n")
 
         if need_ram_reset:
             need_ram_reset = False
