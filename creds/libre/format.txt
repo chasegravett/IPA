@@ -1,0 +1,4 @@
+Passwords will be stored like this temporarily:
+username,password
+
+Adding this file should keep the directory in order

@@ -715,10 +715,10 @@ class TinyActiveFrame(Labelframe):
         }
 
         self.resolved_sounds = {
-            "FECC": "assets\\audio\\FECC_resolved_alert.wav",            #Connect2First
-            "LES": "",              #LexNet
-            "Empower": "",      #Empower
-            "ClayCounty": "" #ClayCounty
+            "FECC": "assets\\audio\\FECC_resolved_alert.wav",       #Connect2First
+            "LES": "",                                              #LexNet
+            "Empower": "",                                          #Empower
+            "ClayCounty": ""                                        #ClayCounty
         }
 
         self.grid(
