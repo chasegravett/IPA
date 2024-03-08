@@ -834,6 +834,7 @@ class TinyActiveFrame(Labelframe):
         last_device = ""
         last_alert = ""
         last_timestamp = ""
+        permission_errors = 0
         # last_resolved_alert = ""
         while not self.stop_thread:
             global need_ram_reset
@@ -851,9 +852,25 @@ class TinyActiveFrame(Labelframe):
             except WebDriverException as e:
                 print("\n\nWeb Driver Exception...\n\n")
                 self.restart_browser()
+            except PermissionError:
+                if permission_errors > 0:
+                    print("\nRefresh did not solve Permission Error. Exiting Browser\n")
+                    for _ in range(5):
+                        Beep(250, 750)
+                    self.stop_thread = True
+                else:                    
+                    print("\nPermission Error. Attempting restart to fix issue...\n")
+                    permission_errors += 1
+                    self.restart_browser(current_memory_usage)
+                    for _ in range(2):
+                        Beep(250, 750)
             except Exception as e:
                 self.stop_thread = True
+                print("\n\n\n")
                 error(format_exc(e))
+                print("\n\n\n")
+                for _ in range(3):
+                    Beep(300, 750)
             else:
                 data = newest_entry.text
                 if data == 'Loading...':
