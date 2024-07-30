@@ -13,7 +13,7 @@ from winsound import PlaySound, Beep
 from subprocess import check_output
 from psutil import virtual_memory
 from traceback import format_exc
-from os.path import isfile
+from os.path import isfile, dirname, join
 from logging import error
 from time import sleep
 from settings import *
@@ -28,7 +28,10 @@ def launch_browser(url):
     options.add_argument('--disable-application-cache')
     options.add_argument('--disable-gpu')
     options.add_argument("--disable-dev-shm-usage")
-    driver = Chrome(options=options, service=Service(ChromeDriverManager().install()))
+    chrome_install = ChromeDriverManager().install()
+    folder = dirname(chrome_install)
+    chrome_driver_path = join(folder, "chromedriver.exe")
+    driver = Chrome(options=options, service=Service(chrome_driver_path))
     driver.execute_cdp_cmd("Network.setCacheDisabled", {"cacheDisabled": True})
     driver.get(url)
     return driver
@@ -40,8 +43,9 @@ def get_timestamp_string(timestamp):
     hour, minute, second = time.split(":")
     month_word = MONTHS[int(month) - 1]
     hour = int(hour) if hour != "0" else 12
-    if hour > 12:
-        hour -= 12
+    if hour >= 12:
+        if hour > 12:
+            hour -= 12
         tense = "P.M."
     else:
         tense = "A.M."
@@ -839,7 +843,7 @@ class TinyActiveFrame(Labelframe):
         while not self.stop_thread:
             global need_ram_reset
             current_memory_usage = virtual_memory()[2]
-            if  current_memory_usage >= 90:
+            if  current_memory_usage >= 95:
                 need_ram_reset = True
             time_to_sleep = 10
 
